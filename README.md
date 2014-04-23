@@ -7,9 +7,9 @@ Detect (and remove) duplications in large cluster. Using Hadoop and HBase.
 
 Jar: pacjfiles.jar
 Usage: 
-#hadoop jar packfiles.jar <input dir> <output dir>
+hadoop jar packfiles.jar <input dir> <output dir>
 Example: 
-#hadoop jar packfiles.jar /inputFiles /seqdata
+hadoop jar packfiles.jar /inputFiles /seqdata
 
 Where /inputFiles contains the files need to be processed
 Output: After run, there will be a directory "/seqdata” locates HDFS /
@@ -17,15 +17,15 @@ Output: After run, there will be a directory "/seqdata” locates HDFS /
 2. Remove duplicate files
 
 Requirement: build base table in hbase shell first
-	# hbase shell
-	# create 'dup','cf'
-	# scan 'dup'
+hbase shell
+create 'dup','cf'
+scan 'dup'
 	
 Jar: removeDup.jar
 Usage: 
-#hadoop jar removedup.jar <input sequence file>
+hadoop jar removedup.jar <input sequence file>
 Example: 
-#hadoop jar removedup.jar /seqdata
+hadoop jar removedup.jar /seqdata
 where "/seqdata” is sequence file directory generated in the previous step.
 Output: in hbase shell do, scan 'dup'
 
@@ -33,9 +33,9 @@ Output: in hbase shell do, scan 'dup'
 
 Jar: search.jar
 Usage: 
-#hadoop jar search.jar <query file>
+hadoop jar search.jar <query file>
 Example: 
-#hadoop jar search.jar /xxxxxxx.xxx
+hadoop jar search.jar /xxxxxxx.xxx
 where “/xxxxxx.xxxx” is query file directory on HDFS.
 Output: See the console
 

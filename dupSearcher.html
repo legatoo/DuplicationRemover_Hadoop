@@ -1,0 +1,197 @@
+
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>HKU COC Duplication Detecter and More</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <link rel="stylesheet" href="http://twitter.github.com/bootstrap/1.4.0/bootstrap.min.css">
+        <script src="js/spark-md5.js" type="text/javascript"></script>
+
+        <style type="text/css" media="screen">
+            .input-file {
+                padding: 5px;
+                margin-right: 25px;
+            }
+            
+            .example {
+				padding: 10px;
+				border: 1px solid #ccc;
+			}
+			
+			.parent {
+                position:fixed;
+                top: 50%;
+                left: 50%;
+                width:36em;
+                height:18em;
+                margin-top: -9em; /*set to a negative number 1/2 of your height*/
+                margin-left: -18em; /*set to a negative number 1/2 of your width*/
+                border: 1px solid #ccc;
+                background-color: #f3f3f3;
+            }
+        
+        .child{
+            height: 100%; overflow: auto;
+        }
+        </style>
+    </head>
+    <body class="container">
+        <h1 align="center">HKU COC Duplication Detecter and More</h1>
+
+        <div class="actions" align="center">
+            <input type="file" id="file" class="input-file span5"/>
+            <input type="button" id="info" value="info" class="btn primary"/>
+            <!--<input type="button" id="form" value="search" class="btn"/>-->
+        </div>
+        <div id="log" align="center"></div>
+        <div id="output"></div>
+        
+       
+        
+        <div class="parent" >
+            <div id="list" class="child"></div>
+            <div id="upload" align="center"></div>
+        </div>
+        
+
+
+        <script type="text/javascript">
+
+            var blobSlice = File.prototype.slice || File.prototype.mozSlice || File.prototype.webkitSlice,
+                log = document.getElementById("log"),
+                input = document.getElementById("file"),
+                running = false;
+                upload = document.getElementById("upload");
+            var MD5 = "";
+
+            function registerLog(str, className) {
+                var elem = document.createElement("div");
+                elem.innerHTML = str;
+                elem.className = "alert-message" + (className ? " "  + className : "");
+                log.appendChild(elem);
+            }
+            
+            function makeForm(str) {
+                var elem = document.createElement("div");
+                elem.innerHTML = str;
+                upload.appendChild(elem);
+            }
+            
+            
+
+            if (!("FileReader" in window) || !("File" in window) || !blobSlice) {
+                registerLog("<p><strong>Your browser does not support the FileAPI or slicing of files.</strong></p>", "error");
+            }
+            else {
+                var ua = navigator.userAgent.toLowerCase();
+
+                if (/chrome/.test(ua)) {
+                    if (location.protocol === "file:") {
+                        registerLog("<p><strong>This example will only work in chrome (in file:// protocol) if you start it up with -allow-file-access-from-files argument.</strong><br/>This is a security measure introduced in chrome, please <a target=\"_blank\" href=\"http://code.google.com/p/chromium/issues/detail?id=60889\">see</a>.</p>");
+                    }
+                }
+                else if (/firefox/.test(ua)) {
+                    var firebugEnabled = !!(window.console && (window.console.firebug || (console.exception && console.table)));
+                    if (firebugEnabled) registerLog("<p><strong>It seems you got firebug enabled.</strong><br/>Firebug slows down this script by a great margin and causes high memory/cpu usage, please disable it and use the built in web console instead.</p>");
+                }
+                else if (/opera/.test(ua)) {
+                    registerLog("<p><strong>If you got DragonFly open please consider closing it as it slows down the test by a great margin.</strong></p>");
+                }
+
+                function doIncrementalTest() {
+
+                    if (running) return;
+                    if (input.files.length == 0) {
+                        registerLog("<strong>Please select a file.</strong><br/>");
+                        return;
+                    }
+                    
+					
+                    var blobSlice = File.prototype.slice || File.prototype.mozSlice || File.prototype.webkitSlice,
+                        file = input.files[0],
+                        chunkSize = 2097152,                           // read in chunks of 2MB
+                        chunks = Math.ceil(file.size / chunkSize),
+                        currentChunk = 0,
+                        spark = new SparkMD5.ArrayBuffer(),
+                        time,
+                        uniqueId = "chunk_" + (new Date().getTime()),
+                        chunkId = null,
+
+                    frOnload = function(e) {
+
+                        if (currentChunk == 0) registerLog("");
+                        else {
+                            if (chunkId === null) chunkId = document.getElementById(uniqueId);
+                            chunkId.innerHTML = currentChunk + 1;
+                        }
+
+                        spark.append(e.target.result);                 // append array buffer
+                        currentChunk += 1;
+
+                        if (currentChunk < chunks) {
+                            loadNext();
+                        }
+                        else {
+                            running = false;
+                            MD5 = spark.end();
+                            //registerLog("<strong>MD5 :</strong> " + MD5 + "<br/>", "success");
+                            // compute hash
+                            appendForm();
+                        }
+                    },
+
+                   frOnerror = function() {
+                        running = false;
+                        registerLog("<strong>Oops, something went wrong.</strong>", "error");
+                   },
+
+                    loadNext = function() {
+                        var fileReader = new FileReader();
+                        fileReader.onload = frOnload;
+                        fileReader.onerror = frOnerror;
+
+                        var start = currentChunk * chunkSize,
+                            end = ((start + chunkSize) >= file.size) ? file.size : start + chunkSize;
+
+                        fileReader.readAsArrayBuffer(blobSlice.call(file, start, end));
+                    };
+
+                    running = true;
+                    time = new Date().getTime();
+                    loadNext();
+                }
+
+
+                
+                function appendForm(){
+                    var file = input.files[0];
+                    var reader = new FileReader();
+                    // Closure to capture the file information.
+                    reader.onload = (function(theFile) {
+                        return function(e) {
+                            // Render thumbnail.
+                            var span = document.createElement('span');
+                            span.innerHTML = ['<img class="thumb" src="', e.target.result,
+                                    '" title="', escape(theFile.name), '"/>'].join('');
+                            document.getElementById('list').insertBefore(span, null);
+                        };
+                    })(file);
+                                     
+                    // Read in the image file as a data URL.
+                    reader.readAsDataURL(file);
+
+					makeForm('\
+        <form name="myForm" id="myForm" method="post" action="get.php">\
+        <input type="hidden" name="md5" value="'+MD5+'">\
+          <input type="submit" name="search" >\
+        </form>\
+    ');
+				}  
+            }
+           
+           
+            document.getElementById("info").addEventListener("click", doIncrementalTest);
+            document.getElementById("form").addEventListener("click", appendForm);
+        </script>
+    </body>
+</html>
